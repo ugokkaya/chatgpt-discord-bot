@@ -55,10 +55,12 @@ func onMessage(session *discordgo.Session, message *discordgo.MessageCreate) {
 	content := message.Content
 
 	// Mesajın başında "chatgpt" var mı diye kontrol et
-	if strings.HasPrefix(content, "/chatgpt") {
+	if strings.HasPrefix(content, "/gpt") {
+
+		content = strings.Replace(content, "/gpt ", "", 1)
 
 		// Yanıtı mesaj olarak gönder
-		lastMsg, err := session.ChannelMessageSend(message.ChannelID, "Düşünülüyor...")
+		lastMsg, err := session.ChannelMessageSend(message.ChannelID, "Araştırılıyor...")
 
 		// Chatgpt istek
 		client := openai.NewClient(os.Getenv("OPENAI_API_KEY"))
@@ -68,7 +70,7 @@ func onMessage(session *discordgo.Session, message *discordgo.MessageCreate) {
 				Model: openai.GPT3Dot5Turbo,
 				Messages: []openai.ChatCompletionMessage{
 					{
-						Role:    openai.ChatMessageRoleUser,
+						Role:    openai.ChatMessageRoleAssistant,
 						Content: content,
 					},
 				},
