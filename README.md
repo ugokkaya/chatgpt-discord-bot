@@ -1,2 +1,3 @@
 # chatgpt-discord-bot
-chatgpt
+Go
+chatgpt-discord-bot
