@@ -11,6 +11,8 @@ import (
 	"strings"
 )
 
+var userMessages = make(map[string][]openai.ChatCompletionMessage)
+
 func main() {
 	godotenv.Load()
 	// Discord bot tokeni buraya yazın
@@ -53,6 +55,23 @@ func onMessage(session *discordgo.Session, message *discordgo.MessageCreate) {
 
 	// Mesajın içeriğini al
 	content := message.Content
+	userID := message.Author.ID
+
+	if content == "/gpt -clear" {
+		delete(userMessages, userID)
+		// Yanıtı mesaj olarak gönder
+		session.ChannelMessageSend(message.ChannelID, "Önbellek temizlendi.")
+		return
+	}
+
+	if _, ok := userMessages[userID]; !ok {
+		userMessages[userID] = []openai.ChatCompletionMessage{}
+	}
+
+	userMessages[userID] = append(userMessages[userID], openai.ChatCompletionMessage{
+		Role:    openai.ChatMessageRoleUser,
+		Content: content,
+	})
 
 	// Mesajın başında "chatgpt" var mı diye kontrol et
 	if strings.HasPrefix(content, "/gpt") {
@@ -67,13 +86,8 @@ func onMessage(session *discordgo.Session, message *discordgo.MessageCreate) {
 		resp, err := client.CreateChatCompletion(
 			context.Background(),
 			openai.ChatCompletionRequest{
-				Model: openai.GPT3Dot5Turbo,
-				Messages: []openai.ChatCompletionMessage{
-					{
-						Role:    openai.ChatMessageRoleAssistant,
-						Content: content,
-					},
-				},
+				Model:    openai.GPT3Dot5Turbo,
+				Messages: userMessages[userID],
 			},
 		)
 
@@ -81,6 +95,12 @@ func onMessage(session *discordgo.Session, message *discordgo.MessageCreate) {
 			fmt.Printf("ChatCompletion error: %v\n", err)
 			return
 		}
+
+		// Botun yanıtını geçmişe ekle
+		userMessages[userID] = append(userMessages[userID], openai.ChatCompletionMessage{
+			Role:    openai.ChatMessageRoleAssistant,
+			Content: resp.Choices[0].Message.Content,
+		})
 
 		err = session.ChannelMessageDelete(message.ChannelID, lastMsg.ID)
 		// Yanıtı mesaj olarak gönder
